@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1b17">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.png">
+<title>RunTrack 3D & Social</title>
+<!-- 3D Engine for 3D Route & 3D Print -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root { 
+    --bg:#0f1b17; --card:#17261f; --card-light:#1f332a; 
+    --line:#263a31; --ink:#f0f7f4; --muted:#8fa59c; 
+    --accent:#4cc98c; --accent-glow:#4cc98c44; --danger:#ff6b6b; --gold:#f2c14e;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+  body { background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif; padding-bottom: calc(75px + env(safe-area-inset-bottom)); }
+  main { max-width: 500px; margin: 0 auto; padding: 16px; }
+  [hidden] { display:none !important; }
+  
+  /* Badges & Pills */
+  .pill { display:inline-block; font-size:.75rem; padding:4px 10px; border-radius:999px; background:var(--card); color:var(--muted); font-weight:600; }
+  .pill.good { color:var(--accent); border:1px solid #4cc98c55; } 
+  .pill.ok { color:var(--gold); } 
+  .pill.weak { color:var(--danger); }
+  .live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--accent); margin-right:4px; animation:pulse 1.5s infinite; }
+  @keyframes pulse { 0%, 100%{ opacity:1; transform:scale(1); } 50%{ opacity:0.4; transform:scale(1.2); } }
+
+  /* Big Display */
+  .big { font-size:4.5rem; font-weight:800; line-height:1; margin:16px 0 4px; font-variant-numeric: tabular-nums; }
+  .big small { font-size:1.3rem; color:var(--muted); font-weight:500; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0; }
+  .stat { background:var(--card); border-radius:14px; padding:12px 14px; border:1px solid var(--line); }
+  .stat b { display:block; font-size:1.5rem; font-variant-numeric: tabular-nums; }
+  .stat span { color:var(--muted); font-size:.8rem; }
+  
+  /* Buttons & Inputs */
+  .controls { display:flex; gap:10px; margin:16px 0; flex-wrap:wrap; }
+  button { font:inherit; border:0; border-radius:14px; padding:14px; font-weight:700; cursor:pointer; color:var(--ink); background:var(--card); transition:0.15s ease; border:1px solid transparent; }
+  button:active { transform: scale(0.98); }
+  button.primary { background:var(--accent); color:#06231a; }
+  button.danger { background:var(--danger); color:#2b0505; }
+  button.outline { background:transparent; border-color:var(--accent); color:var(--accent); }
+  button.grow { flex:1; }
+  button.small { padding:6px 14px; font-size:.82rem; font-weight:600; border-radius:10px; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  input[type=text], textarea { width:100%; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--ink); font:inherit; margin:8px 0; }
+
+  /* Navigation Bar */
+  nav { position:fixed; left:0; right:0; bottom:0; display:flex; background:rgba(23,38,31,0.95); backdrop-filter:blur(10px); border-top:1px solid var(--line); z-index:100; padding-bottom:env(safe-area-inset-bottom); }
+  nav button { flex:1; border-radius:0; background:none; color:var(--muted); padding:12px 6px; font-size:0.75rem; display:flex; flex-direction:column; align-items:center; gap:4px; font-weight:600; }
+  nav button[aria-current="true"] { color:var(--accent); }
+  nav button svg { width:22px; height:22px; fill:currentColor; }
+
+  /* 3D Viewport & Printing */
+  .viewport-3d-box { position:relative; width:100%; height:340px; background:#070d0b; border-radius:16px; overflow:hidden; border:1px solid var(--line); margin:12px 0; touch-action:none; }
+  #canvas3d { width:100%; height:100%; display:block; }
+  .view3d-overlay { position:absolute; bottom:10px; left:10px; right:10px; display:flex; justify-content:space-between; align-items:center; pointer-events:none; }
+  .view3d-overlay * { pointer-events:auto; }
+
+  /* Profile Card & Feed */
+  .profile-banner { background:linear-gradient(135deg, #1f3d31 0%, #17261f 100%); border-radius:18px; padding:18px; border:1px solid var(--line); margin-bottom:18px; }
+  .profile-header { display:flex; gap:14px; align-items:center; }
+  .avatar { width:64px; height:64px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:800; color:#06231a; border:3px solid var(--card); }
+  .profile-info h3 { font-size:1.3rem; }
+  .profile-info p { color:var(--muted); font-size:0.85rem; }
+  .stats-row { display:flex; justify-content:space-around; background:var(--card); border-radius:12px; padding:10px; margin-top:14px; text-align:center; }
+  .stats-row div b { display:block; font-size:1.2rem; color:var(--ink); }
+  .stats-row div span { font-size:0.75rem; color:var(--muted); }
+
+  /* Users List */
+  .user-card { display:flex; align-items:center; justify-content:space-between; background:var(--card); padding:12px 14px; border-radius:14px; margin-bottom:10px; border:1px solid var(--line); }
+  .user-card .left { display:flex; align-items:center; gap:12px; }
+  .user-card .u-avatar { width:42px; height:42px; border-radius:50%; background:#294639; display:flex; align-items:center; justify-content:center; font-weight:bold; color:var(--accent); }
+  .user-card .u-details b { display:block; font-size:0.95rem; }
+  .user-card .u-details small { color:var(--muted); font-size:0.75rem; }
+
+  /* Lists & Utility */
+  ol.splits { list-style:none; }
+  ol.splits li, .hist-item { display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--line); align-items:center; }
+  .hist-item { background:var(--card); padding:12px 14px; border-radius:14px; margin-bottom:8px; width:100%; text-align:left; }
+  .warn { background:#3a2e12; color:var(--gold); padding:10px 12px; border-radius:12px; font-size:.85rem; margin:10px 0; }
+  h2 { font-size:.85rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:20px 0 10px; }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- TAB 1: RUN TRACKER -->
+  <section id="viewRun">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span class="pill" id="gps">GPS ready</span>
+      <span class="pill good"><span class="live-dot"></span>Live Profile Online</span>
+    </div>
+
+    <div class="big"><span id="dist">0.00</span> <small>km</small></div>
+    
+    <div class="grid">
+      <div class="stat"><b id="time">0:00</b><span>Time</span></div>
+      <div class="stat"><b id="pace">--:--</b><span>Pace (min/km)</span></div>
+      <div class="stat"><b id="speed">0.0</b><span>Speed (km/h)</span></div>
+      <div class="stat"><b id="avgPace">--:--</b><span>Avg Pace</span></div>
+    </div>
+
+    <div id="bgWarn" class="warn" hidden>स्क्रीन बंद होने पर GPS रुक सकता है। कृपया स्क्रीन चालू रखें।</div>
+
+    <div class="controls">
+      <button class="primary grow" id="btnStart">Start Run</button>
+      <button class="grow" id="btnPause" hidden>Pause</button>
+      <button class="primary grow" id="btnResume" hidden>Resume</button>
+      <button class="danger grow" id="btnFinish" hidden>Finish</button>
+    </div>
+
+    <h2 id="splitsTitle" hidden>Splits</h2>
+    <ol class="splits" id="splits"></ol>
+  </section>
+
+  <!-- TAB 2: 3D LOCATION & 3D PRINT -->
+  <section id="view3D" hidden>
+    <h2>3D Route & 3D Location Print</h2>
+    <p style="font-size:0.85rem; color:var(--muted);">3D मॉडल को उंगली या माउस से घुमाएँ (Orbit/Rotate/Zoom)।</p>
+    
+    <div class="viewport-3d-box">
+      <div id="canvas3d"></div>
+      <div class="view3d-overlay">
+        <span class="pill" id="status3D">3D Model Ready</span>
+        <button class="small outline" id="btnResetCamera">Reset View</button>
+      </div>
+    </div>
+
+    <!-- 3D Print Controls -->
+    <div class="stat" style="margin-bottom:14px;">
+      <b>3D Location Printing Options</b>
+      <p style="color:var(--muted); font-size:0.8rem; margin:6px 0 12px;">अपने रन की लोकेशन का फिजिकल 3D मॉडल बनाएं या 3D पोस्टर निकालें:</p>
+      
+      <div class="controls" style="margin:0;">
+        <button class="primary grow" id="btnExportSTL">
+          🖨️ Export .STL for 3D Printer
+        </button>
+        <button class="outline grow" id="btnPrintPoster">
+          📄 Print 3D Poster / PDF
+        </button>
+      </div>
+    </div>
+    <div id="printNote" class="warn" hidden></div>
+  </section>
+
+  <!-- TAB 3: LIVE PROFILE & COMMUNITY (FOLLOW USERS) -->
+  <section id="viewProfile" hidden>
+    <!-- My Live Profile -->
+    <div class="profile-banner">
+      <div class="profile-header">
+        <div class="avatar" id="myAvatar">A</div>
+        <div class="profile-info">
+          <h3 id="myName">Alex Runner</h3>
+          <p id="myHandle">@alex_runs • <span class="live-dot"></span>Live</p>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div><b id="myTotalKm">0.0</b><span>Total Km</span></div>
+        <div><b id="myTotalRuns">0</b><span>Runs</span></div>
+        <div><b id="myFollowersCount">24</b><span>Followers</span></div>
+        <div><b id="myFollowingCount">12</b><span>Following</span></div>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <button class="small outline grow" id="btnEditProfile">Edit Profile</button>
+        <button class="small grow" id="btnShareProfile">Share Live Link</button>
+      </div>
+    </div>
+
+    <!-- Profile Edit Form (Toggleable) -->
+    <div id="profileEditBox" class="stat" style="margin-bottom:18px;" hidden>
+      <b>Edit Profile</b>
+      <input type="text" id="inputName" placeholder="Your Name">
+      <input type="text" id="inputBio" placeholder="Short bio (e.g. Marathoner / 5K Enthusiast)">
+      <div class="controls" style="margin-top:8px;">
+        <button class="primary small grow" id="btnSaveProfile">Save</button>
+        <button class="small grow" id="btnCancelProfile">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Community & Following -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <h2>Discover & Follow Runners</h2>
+      <span class="pill" id="followingStatsBadge">Following 2</span>
+    </div>
+
+    <div id="runnersList">
+      <!-- Generated via JS -->
+    </div>
+  </section>
+
+  <!-- TAB 4: HISTORY & SUMMARY -->
+  <section id="viewHistory" hidden>
+    <h2>Past Runs</h2>
+    <div id="historyList"></div>
+  </section>
+
+  <!-- SUMMARY MODAL (AFTER FINISH) -->
+  <section id="viewSummary" hidden>
+    <button class="small" id="btnBackToRun">&larr; Back to App</button>
+    <h2 id="sumDate"></h2>
+    <div class="big"><span id="sumDist"></span> <small>km</small></div>
+    <div class="grid">
+      <div class="stat"><b id="sumTime"></b><span>Time</span></div>
+      <div class="stat"><b id="sumPace"></b><span>Avg pace</span></div>
+      <div class="stat"><b id="sumSpeed"></b><span>Avg speed</span></div>
+      <div class="stat"><b id="sumSplits"></b><span>Splits</span></div>
+    </div>
+    
+    <div class="controls">
+      <button class="primary grow" id="btnViewIn3D">View & Print in 3D</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- BOTTOM NAVIGATION -->
+<nav>
+  <button id="navRun" aria-current="true">
+    <svg viewBox="0 0 24 24"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/></svg>
+    Run
+  </button>
+  <button id="nav3D" aria-current="false">
+    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    3D Print
+  </button>
+  <button id="navProfile" aria-current="false">
+    <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+    Profile
+  </button>
+  <button id="navHistory" aria-current="false">
+    <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+    History
+  </button>
+</nav>
+
+<script src="/core.js"></script>
+<script>
+(function() {
+  const C = window.RunCore;
+  const $ = (id) => document.getElementById(id);
+
+  // ================= 1. PROFILE & SOCIAL STORAGE =================
+  let profile = JSON.parse(localStorage.getItem('my_runner_profile') || JSON.stringify({
+    name: 'Rohan Sharma',
+    handle: '@rohan_runs',
+    bio: 'Morning runner & 10k aspirant 🏃‍♂️',
+    following: ['u1', 'u3'] // list of user ids followed
+  }));
+
+  const mockRunners = [
+    { id: 'u1', name: 'Priya Patel', handle: '@priya_fast', status: 'Live 4.2 km (Pace 5:10)', isLive: true, runs: 45, km: 284 },
+    { id: 'u2', name: 'Vikram Singh', handle: '@vikram_marathon', status: 'Ran 10.5 km 2 hrs ago', isLive: false, runs: 120, km: 920 },
+    { id: 'u3', name: 'Ananya Roy', handle: '@ananya_runs', status: 'Live 2.8 km (Pace 6:05)', isLive: true, runs: 28, km: 140 },
+    { id: 'u4', name: 'Kabir Mehta', handle: '@kabir_trail', status: 'Ran 5.0 km yesterday', isLive: false, runs: 65, km: 410 },
+  ];
+
+  function saveProfile() {
+    localStorage.setItem('my_runner_profile', JSON.stringify(profile));
+    updateProfileUI();
+  }
+
+  function updateProfileUI() {
+    $('myName').textContent = profile.name;
+    $('myHandle').innerHTML = profile.handle + ' • <span class="live-dot"></span>Live';
+    $('myAvatar').textContent = profile.name.charAt(0).toUpperCase();
+    $('myFollowingCount').textContent = profile.following.length;
+    $('followingStatsBadge').textContent = 'Following ' + profile.following.length;
+
+    // Calculate total km from history
+    let totalMeters = history.reduce((acc, r) => acc + (r.distance || 0), 0);
+    $('myTotalKm').textContent = (totalMeters / 1000).toFixed(1);
+    $('myTotalRuns').textContent = history.length;
+
+    renderRunnersList();
+  }
+
+  function toggleFollow(userId) {
+    const idx = profile.following.indexOf(userId);
+    if (idx > -1) {
+      profile.following.splice(idx, 1);
+    } else {
+      profile.following.push(userId);
+    }
+    saveProfile();
+  }
+
+  function renderRunnersList() {
+    const box = $('runnersList');
+    box.innerHTML = '';
+    mockRunners.forEach(u => {
+      const isFollowing = profile.following.includes(u.id);
+      const card = document.createElement('div');
+      card.className = 'user-card';
+      card.innerHTML = `
+        <div class="left">
+          <div class="u-avatar">${u.name.charAt(0)}</div>
+          <div class="u-details">
+            <b>${u.name} ${u.isLive ? '<span class="live-dot" title="Live Running"></span>' : ''}</b>
+            <small>${u.handle} • ${u.status}</small>
+          </div>
+        </div>
+        <button class="small ${isFollowing ? 'outline' : 'primary'}" data-id="${u.id}">
+          ${isFollowing ? 'Following' : '+ Follow'}
+        </button>
+      `;
+      card.querySelector('button').onclick = () => toggleFollow(u.id);
+      box.appendChild(card);
+    });
+  }
+
+  // ================= 2. TRACKER & RUN STATE =================
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem('runs') || '[]'); } catch (_) {}
+  function persist() { try { localStorage.setItem('runs', JSON.stringify(history.slice(0, 50))); } catch (_) {} }
+
+  let state = 'idle';
+  const tracker = new C.Tracker();
+  let watchId = null, timer = null, activeMs = 0, lastTick = 0, startedAt = 0, wakeLock = null;
+  let currentActiveRun = null;
+
+  function paint() {
+    const sec = activeMs / 1000;
+    $('dist').textContent = (tracker.distance / 1000).toFixed(2);
+    $('time').textContent = C.fmtTime(sec);
+    const cur = state === 'running' ? tracker.currentSpeed(activeMs) : null;
+    $('pace').textContent = cur > 0.3 ? C.fmtPace(1000 / cur) : '--:--';
+    $('speed').textContent = cur > 0.3 ? (cur * 3.6).toFixed(1) : '0.0';
+    $('avgPace').textContent = C.fmtPace(C.paceFrom(sec, tracker.distance));
+  }
+
+  function tick() {
+    const now = Date.now();
+    if (state === 'running') activeMs += now - lastTick;
+    lastTick = now;
+    paint();
+  }
+
+  function start() {
+    if (!('geolocation' in navigator)) { alert('GPS is not supported on this browser.'); return; }
+    tracker.reset();
+    activeMs = 0;
+    startedAt = Date.now();
+    lastTick = startedAt;
+    state = 'running';
+    $('btnStart').hidden = true;
+    $('btnPause').hidden = false;
+    $('btnFinish').hidden = false;
+    $('gps').textContent = 'Searching GPS...';
+
+    watchId = navigator.geolocation.watchPosition(p => {
+      const acc = p.coords.accuracy;
+      tracker.add({ lat: p.coords.latitude, lng: p.coords.longitude, t: p.timestamp, acc }, activeMs);
+      $('gps').textContent = 'GPS ±' + Math.round(acc) + ' m';
+      paint();
+    }, () => {}, { enableHighAccuracy: true });
+
+    timer = setInterval(tick, 1000);
+  }
+
+  function pause() {
+    state = 'paused';
+    tracker.breakSegment();
+    $('btnPause').hidden = true;
+    $('btnResume').hidden = false;
+  }
+
+  function resume() {
+    lastTick = Date.now();
+    state = 'running';
+    $('btnPause').hidden = false;
+    $('btnResume').hidden = true;
+  }
+
+  function finish() {
+    if (!confirm('क्या आप रन समाप्त करना चाहते हैं?')) return;
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    clearInterval(timer);
+    state = 'idle';
+
+    const run = {
+      id: String(startedAt || Date.now()),
+      name: profile.name + ' Run',
+      startedAt: startedAt || Date.now(),
+      distance: Math.round(tracker.distance),
+      duration: Math.round(activeMs / 1000),
+      splits: tracker.splitTimes().map(Math.round),
+      route: tracker.points.length >= 2 ? C.downsample(tracker.points, 350).map(p => [+p.lat.toFixed(5), +p.lng.toFixed(5)]) : generateSampleRoute()
+    };
+
+    history.unshift(run);
+    persist();
+    updateProfileUI();
+    currentActiveRun = run;
+
+    // Reset UI
+    $('btnStart').hidden = false;
+    $('btnPause').hidden = true;
+    $('btnResume').hidden = true;
+    $('btnFinish').hidden = true;
+    $('dist').textContent = '0.00';
+    $('time').textContent = '0:00';
+
+    openSummary(run);
+  }
+
+  // Demo sample route in case GPS was tested indoors
+  function generateSampleRoute() {
+    const pts = [];
+    const baseLat = 28.6139, baseLng = 77.2090;
+    for(let i=0; i<30; i++) {
+      pts.push([+(baseLat + Math.sin(i/3)*0.005).toFixed(5), +(baseLng + (i*0.0004)).toFixed(5)]);
+    }
+    return pts;
+  }
+
+  function openSummary(run) {
+    currentActiveRun = run;
+    $('sumDate').textContent = new Date(run.startedAt).toLocaleString();
+    $('sumDist').textContent = (run.distance / 1000).toFixed(2);
+    $('sumTime').textContent = C.fmtTime(run.duration);
+    $('sumPace').textContent = C.fmtPace(C.paceFrom(run.duration, run.distance));
+    $('sumSpeed').textContent = C.speedKmh(run.duration, run.distance).toFixed(1);
+    $('sumSplits').textContent = run.splits ? run.splits.length : 0;
+    switchTab('summary');
+  }
+
+  // ================= 3. THREE.JS 3D LOCATION & 3D PRINTING =================
+  let scene, camera, renderer, currentMeshGroup = null, animId = null;
+  let isDragging = false, prevMouseX = 0, prevMouseY = 0;
+
+  function init3D() {
+    const container = $('canvas3d');
+    if (renderer) return; // already initialized
+
+    const width = container.clientWidth || 360;
+    const height = container.clientHeight || 340;
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a1410);
+
+    camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    camera.position.set(0, 35, 55);
+    camera.lookAt(0, 0, 0);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    container.appendChild(renderer.domElement);
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambient);
+
+    const dirLight = new THREE.DirectionalLight(0x4cc98c, 1.2);
+    dirLight.position.set(20, 40, 20);
+    scene.add(dirLight);
+
+    // Mouse / Touch Orbit controls
+    container.addEventListener('pointerdown', (e) => {
+      isDragging = true;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!isDragging || !currentMeshGroup) return;
+      const dx = e.clientX - prevMouseX;
+      const dy = e.clientY - prevMouseY;
+      currentMeshGroup.rotation.y += dx * 0.01;
+      currentMeshGroup.rotation.x += dy * 0.01;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+    });
+
+    window.addEventListener('pointerup', () => { isDragging = false; });
+
+    function animate() {
+      animId = requestAnimationFrame(animate);
+      if (currentMeshGroup && !isDragging) {
+        currentMeshGroup.rotation.y += 0.003; // subtle auto-spin
+      }
+      renderer.render(scene, camera);
+    }
+    animate();
+  }
+
+  function build3DRoute(routePoints) {
+    init3D();
+    if (currentMeshGroup) scene.remove(currentMeshGroup);
+    currentMeshGroup = new THREE.Group();
+
+    // 1. Base Pedestal (3D Printable Block)
+    const baseGeo = new THREE.CylinderGeometry(20, 21, 2.5, 32);
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x162b22, roughness: 0.6 });
+    const pedestal = new THREE.Mesh(baseGeo, baseMat);
+    pedestal.position.y = -1.25;
+    currentMeshGroup.add(pedestal);
+
+    // Grid on pedestal
+    const grid = new THREE.GridHelper(36, 16, 0x4cc98c, 0x214436);
+    grid.position.y = 0.02;
+    currentMeshGroup.add(grid);
+
+    // 2. Normalize Route to 3D Space
+    const route = (routePoints && routePoints.length >= 2) ? routePoints : generateSampleRoute();
+    const lats = route.map(p => p[0]), lngs = route.map(p => p[1]);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    const latSpan = Math.max(maxLat - minLat, 0.0001);
+    const lngSpan = Math.max(maxLng - minLng, 0.0001);
+
+    const curvePoints = route.map((p, idx) => {
+      const x = ((p[1] - minLng) / lngSpan - 0.5) * 28;
+      const z = ((p[0] - minLat) / latSpan - 0.5) * 28;
+      // simulated altitude curve for 3D ribbon aesthetic
+      const y = Math.sin((idx / route.length) * Math.PI) * 3 + 0.8;
+      return new THREE.Vector3(x, y, z);
+    });
+
+    const curve = new THREE.CatmullRomCurve3(curvePoints);
+    const tubeGeo = new THREE.TubeGeometry(curve, 80, 0.6, 10, false);
+    const tubeMat = new THREE.MeshStandardMaterial({
+      color: 0x4cc98c,
+      emissive: 0x1a5c3e,
+      roughness: 0.3,
+      metalness: 0.2
+    });
+    const tubeMesh = new THREE.Mesh(tubeGeo, tubeMat);
+    tubeMesh.name = "routeTrack";
+    currentMeshGroup.add(tubeMesh);
+
+    // 3. Start & Finish 3D Markers
+    const startPt = curvePoints[0];
+    const endPt = curvePoints[curvePoints.length - 1];
+
+    const pinGeo = new THREE.SphereGeometry(1.2, 16, 16);
+    const startPin = new THREE.Mesh(pinGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    startPin.position.copy(startPt);
+    currentMeshGroup.add(startPin);
+
+    const endPin = new THREE.Mesh(pinGeo, new THREE.MeshBasicMaterial({ color: 0xff6b6b }));
+    endPin.position.copy(endPt);
+    currentMeshGroup.add(endPin);
+
+    scene.add(currentMeshGroup);
+  }
+
+  // ================= 4. STL GENERATOR FOR 3D PRINTERS =================
+  function exportSTL() {
+    if (!currentMeshGroup) {
+      alert("No 3D route to export!");
+      return;
+    }
+
+    $('printNote').hidden = false;
+    $('printNote').textContent = "Generating 3D Printable STL File...";
+
+    // Parse geometry into ASCII STL format
+    let stl = "solid RunTrack_3D_Location\n";
+    currentMeshGroup.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        const geo = child.geometry.isBufferGeometry ? child.geometry : new THREE.BufferGeometry().fromGeometry(child.geometry);
+        const pos = geo.attributes.position;
+        if (!pos) return;
+
+        child.updateWorldMatrix(true, false);
+        const matrix = child.matrixWorld;
+
+        const vA = new THREE.Vector3(), vB = new THREE.Vector3(), vC = new THREE.Vector3();
+        const cb = new THREE.Vector3(), ab = new THREE.Vector3(), normal = new THREE.Vector3();
+
+        for (let i = 0; i < pos.count; i += 3) {
+          vA.fromBufferAttribute(pos, i).applyMatrix4(matrix);
+          vB.fromBufferAttribute(pos, i + 1).applyMatrix4(matrix);
+          vC.fromBufferAttribute(pos, i + 2).applyMatrix4(matrix);
+
+          cb.subVectors(vC, vB);
+          ab.subVectors(vA, vB);
+          normal.crossVectors(cb, ab).normalize();
+
+          stl += `  facet normal ${normal.x.toFixed(4)} ${normal.y.toFixed(4)} ${normal.z.toFixed(4)}\n`;
+          stl += "    outer loop\n";
+          stl += `      vertex ${vA.x.toFixed(4)} ${vA.y.toFixed(4)} ${vA.z.toFixed(4)}\n`;
+          stl += `      vertex ${vB.x.toFixed(4)} ${vB.y.toFixed(4)} ${vB.z.toFixed(4)}\n`;
+          stl += `      vertex ${vC.x.toFixed(4)} ${vC.y.toFixed(4)} ${vC.z.toFixed(4)}\n`;
+          stl += "    endloop\n  endfacet\n";
+        }
+      }
+    });
+    stl += "endsolid RunTrack_3D_Location\n";
+
+    const blob = new Blob([stl], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Run_3D_Trophy_${Date.now()}.stl`;
+    link.click();
+
+    $('printNote').textContent = "✅ .STL फ़ाइल डाउनलोड हो गई! इसे Cura/Bambu/Prusa 3D Slicer में लोड करके 3D प्रिंट कर सकते हैं।";
+  }
+
+  function printPoster() {
+    if (!renderer) return;
+    const imgData = renderer.domElement.toDataURL("image/png");
+    const printWindow = window.open('', '_blank');
+    const run = currentActiveRun || (history[0] || { distance: 5000, duration: 1500 });
+    
+    printWindow.document.write(`
+      <html>
+      <head>
+        <title>3D Run Poster - ${profile.name}</title>
+        <style>
+          body { font-family: sans-serif; background: #0f1b17; color:#fff; text-align: center; padding: 20px; }
+          .card { max-width: 500px; margin: 0 auto; border: 2px solid #4cc98c; border-radius: 16px; padding: 24px; background: #17261f; }
+          img { width: 100%; border-radius: 12px; margin: 15px 0; background: #000; }
+          h1 { color: #4cc98c; margin: 0; }
+          .stats { display: flex; justify-content: space-around; margin-top: 15px; border-top: 1px solid #263a31; padding-top: 15px; }
+          .stat b { font-size: 22px; display: block; color: #4cc98c; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h1>RUNTRACK 3D LOCATION</h1>
+          <p>Athlete: <b>${profile.name}</b> (${profile.handle})</p>
+          <img src="${imgData}" />
+          <div class="stats">
+            <div><b>${(run.distance/1000).toFixed(2)} km</b><span>Distance</span></div>
+            <div><b>${C.fmtTime(run.duration)}</b><span>Duration</span></div>
+            <div><b>${C.fmtPace(C.paceFrom(run.duration, run.distance))}</b><span>Avg Pace</span></div>
+          </div>
+        </div>
+        <script>setTimeout(() => { window.print(); }, 600);<\/script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
+  // ================= 5. TABS & EVENTS =================
+  function switchTab(tab) {
+    $('viewRun').hidden = tab !== 'run';
+    $('view3D').hidden = tab !== '3d';
+    $('viewProfile').hidden = tab !== 'profile';
+    $('viewHistory').hidden = tab !== 'history';
+    $('viewSummary').hidden = tab !== 'summary';
+
+    $('navRun').setAttribute('aria-current', tab === 'run');
+    $('nav3D').setAttribute('aria-current', tab === '3d');
+    $('navProfile').setAttribute('aria-current', tab === 'profile');
+    $('navHistory').setAttribute('aria-current', tab === 'history');
+
+    if (tab === '3d') {
+      const active = currentActiveRun || history[0];
+      build3DRoute(active ? active.route : null);
+    } else if (tab === 'history') {
+      renderHistory();
+    } else if (tab === 'profile') {
+      updateProfileUI();
+    }
+  }
+
+  function renderHistory() {
+    const box = $('historyList');
+    box.innerHTML = '';
+    if (!history.length) {
+      box.innerHTML = '<p style="color:var(--muted); padding:10px 0;">अभी तक कोई रन सेव नहीं है।</p>';
+      return;
+    }
+    history.forEach((r, idx) => {
+      const div = document.createElement('div');
+      div.className = 'hist-item';
+      div.innerHTML = `
+        <div>
+          <b>${r.name || 'Run #' + (history.length - idx)} • ${(r.distance/1000).toFixed(2)} km</b>
+          <small style="color:var(--muted); display:block;">${new Date(r.startedAt).toLocaleDateString()} • ${C.fmtTime(r.duration)}</small>
+        </div>
+        <button class="small outline">View in 3D</button>
+      `;
+      div.querySelector('button').onclick = () => {
+        currentActiveRun = r;
+        switchTab('3d');
+      };
+      box.appendChild(div);
+    });
+  }
+
+  // Wiring buttons
+  $('btnStart').onclick = start;
+  $('btnPause').onclick = pause;
+  $('btnResume').onclick = resume;
+  $('btnFinish').onclick = finish;
+
+  $('navRun').onclick = () => switchTab('run');
+  $('nav3D').onclick = () => switchTab('3d');
+  $('navProfile').onclick = () => switchTab('profile');
+  $('navHistory').onclick = () => switchTab('history');
+
+  $('btnViewIn3D').onclick = () => switchTab('3d');
+  $('btnBackToRun').onclick = () => switchTab('run');
+
+  $('btnExportSTL').onclick = exportSTL;
+  $('btnPrintPoster').onclick = printPoster;
+  $('btnResetCamera').onclick = () => {
+    if (currentMeshGroup) {
+      currentMeshGroup.rotation.set(0, 0, 0);
+      camera.position.set(0, 35, 55);
+      camera.lookAt(0, 0, 0);
+    }
+  };
+
+  // Profile Edit
+  $('btnEditProfile').onclick = () => {
+    $('profileEditBox').hidden = false;
+    $('inputName').value = profile.name;
+    $('inputBio').value = profile.bio;
+  };
+  $('btnCancelProfile').onclick = () => { $('profileEditBox').hidden = true; };
+  $('btnSaveProfile').onclick = () => {
+    const val = $('inputName').value.trim();
+    if (val) profile.name = val;
+    profile.bio = $('inputBio').value.trim();
+    saveProfile();
+    $('profileEditBox').hidden = true;
+  };
+
+  $('btnShareProfile').onclick = () => {
+    const url = window.location.origin + '/?profile=' + encodeURIComponent(profile.handle);
+    if (navigator.share) {
+      navigator.share({ title: profile.name + ' Live Profile', url });
+    } else {
+      prompt('आपकी प्रोफाइल लिंक:', url);
+    }
+  };
+
+  // Initial load
+  updateProfileUI();
+})();
+</script>
+</body>
+</html>
