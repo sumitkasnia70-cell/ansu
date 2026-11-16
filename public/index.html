@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b1411">
-<title>RunTrack - Live Satellite, Competition & Photo Share</title>
+<title>RunTrack - Live Google Satellite & Real-time GPS</title>
 
-<!-- Leaflet (Satellite & Google Maps View) -->
+<!-- Leaflet Map Engine -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -25,23 +25,23 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, sans-serif; height: 100vh; overflow: hidden; }
 
-  /* Map Container */
+  /* Map Fullscreen */
   #mapView { position: absolute; top: 0; left: 0; right: 0; bottom: 70px; z-index: 1; }
 
   /* Top HUD */
   .top-hud { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 10; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
   .hud-badge { background: rgba(20, 36, 29, 0.95); backdrop-filter: blur(8px); padding: 8px 14px; border-radius: 99px; border: 1px solid var(--line); font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; pointer-events: auto; }
-  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 1.5s infinite; }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.2); } }
   .map-layer-btn { background: rgba(20, 36, 29, 0.95); border: 1px solid var(--line); color: var(--ink); padding: 8px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; cursor: pointer; pointer-events: auto; }
 
-  /* Pace Warning Alert Banner */
+  /* Flashing Pace Alarm Banner */
   #paceAlarmBanner { position: absolute; top: 62px; left: 12px; right: 12px; background: rgba(255, 68, 68, 0.96); color: #fff; padding: 12px 14px; border-radius: 14px; z-index: 25; text-align: center; font-weight: 800; font-size: 0.9rem; box-shadow: 0 0 25px rgba(255, 68, 68, 0.9); animation: flashAlert 0.7s infinite alternate; }
   @keyframes flashAlert { from { transform: scale(0.98); opacity: 0.92; } to { transform: scale(1.02); opacity: 1; } }
 
-  /* Runner Bottom Drawer */
+  /* Running Live Metrics Drawer */
   .run-drawer { position: absolute; bottom: 70px; left: 0; right: 0; background: rgba(14, 26, 21, 0.96); backdrop-filter: blur(12px); border-top: 1px solid var(--line); padding: 12px 16px; z-index: 10; }
-  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; text-align: center; margin-bottom: 8px; }
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1.2fr; gap: 8px; text-align: center; margin-bottom: 8px; }
   .metric b { font-size: 1.35rem; display: block; font-variant-numeric: tabular-nums; }
   .metric span { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; }
 
@@ -64,16 +64,16 @@
   button.small { padding: 6px 12px; font-size: 0.78rem; border-radius: 8px; }
   [hidden] { display: none !important; }
 
-  /* Full Screen Overlays */
+  /* Overlays */
   .full-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 70px; background: var(--bg); z-index: 20; padding: 16px; overflow-y: auto; }
   .participant-card { background: var(--card); border-radius: 14px; padding: 14px; border: 1px solid var(--line); margin-bottom: 10px; }
 
-  /* ================= PHOTO CARD POPUP MODAL ================= */
+  /* Photo Modal */
   .share-modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
   .share-box { background: var(--card); border: 2px solid var(--accent); border-radius: 20px; width: 100%; max-width: 440px; padding: 18px; text-align: center; }
   #runCardCanvas { width: 100%; border-radius: 14px; border: 1px solid var(--line); display: block; margin: 10px 0 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
 
-  /* Bottom Navigation */
+  /* Navigation Bar */
   nav { position: fixed; left: 0; right: 0; bottom: 0; height: 70px; display: flex; background: #0f1d17; border-top: 1px solid var(--line); z-index: 30; }
   nav button { flex: 1; background: none; border: 0; border-radius: 0; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 0.72rem; }
   nav button[aria-current="true"] { color: var(--accent); font-weight: bold; }
@@ -87,8 +87,8 @@
 
   <!-- HUD TOP BAR -->
   <div class="top-hud">
-    <div class="hud-badge"><span class="live-dot"></span> <span id="gpsState">GPS Ready</span></div>
-    <button class="map-layer-btn" id="btnToggleLayer">🛰️ Satellite View</button>
+    <div class="hud-badge"><span class="live-dot"></span> <span id="gpsState">GPS Ready (Click Start)</span></div>
+    <button class="map-layer-btn" id="btnToggleLayer">🛰️ Google Satellite</button>
   </div>
 
   <!-- 🚨 PACE WARNING BANNER -->
@@ -125,44 +125,29 @@
 
     <!-- Action Controls -->
     <div class="controls">
-      <button class="primary grow" id="btnStart">Start GPS Run</button>
+      <button class="primary grow" id="btnStart" style="font-size:1rem; padding:14px;">▶ Start GPS Run</button>
       <button class="grow" id="btnPause" hidden>Pause</button>
       <button class="primary grow" id="btnResume" hidden>Resume</button>
       <button class="danger grow" id="btnFinish" hidden>Finish</button>
       <button class="outline" id="btnOpenShare" title="रनिंग फोटो शेयर करें">📸 Share Photo</button>
       <button id="btnToggleAlarm" class="small outline" style="border-radius:10px;">🔔 Alarm: ON</button>
-      <button id="btnRecenter" title="मेरी लोकेशन पर जाओ">📍</button>
+      <button id="btnRecenter" title="मेरी लोकेशन पर ज़ूम करो">📍 Me</button>
     </div>
   </div>
 
   <!-- ================= 2. PHOTO CARD SHARE MODAL ================= -->
   <div class="share-modal-bg" id="shareModal" hidden>
     <div class="share-box">
-      <h3 style="color:var(--accent); font-size:1.1rem;">🏃‍♂️ RunTrack Activity Photo Card</h3>
+      <h3 style="color:var(--accent); font-size:1.1rem;">🏃‍♂️ RunTrack Activity Card</h3>
       <p style="color:var(--muted); font-size:0.75rem;">पूरा रनिंग ट्रैक, स्टार्ट/फिनिश सर्कल और लोकेशन फ़ोटो:</p>
 
-      <!-- The Real Route Image Canvas -->
       <canvas id="runCardCanvas" width="800" height="800"></canvas>
 
       <div style="display:flex; flex-direction:column; gap:8px;">
-        <!-- WhatsApp Direct Photo Share -->
-        <button class="whatsapp" id="btnShareWA">
-          🟢 Share Photo on WhatsApp
-        </button>
-
-        <!-- Instagram & Phone Share -->
-        <button class="instagram" id="btnShareNative">
-          📸 Share to Instagram / Other Apps
-        </button>
-
-        <!-- Download Image to Gallery -->
-        <button class="outline" id="btnDownloadCard">
-          💾 Download Photo to Gallery
-        </button>
-
-        <button class="small" id="btnCloseShare" style="background:transparent; color:var(--muted);">
-          Close (बंद करें)
-        </button>
+        <button class="whatsapp" id="btnShareWA">🟢 Share Photo on WhatsApp</button>
+        <button class="instagram" id="btnShareNative">📸 Share to Instagram / Other Apps</button>
+        <button class="outline" id="btnDownloadCard">💾 Download Photo to Gallery</button>
+        <button class="small" id="btnCloseShare" style="background:transparent; color:var(--muted);">Close (बंद करें)</button>
       </div>
     </div>
   </div>
@@ -185,8 +170,8 @@
         <div style="width:58px; height:58px; border-radius:50%; background:var(--accent); color:#051d14; font-size:1.6rem; font-weight:800; display:flex; align-items:center; justify-content:center;">S</div>
         <div>
           <h3>Sumit Runner</h3>
-          <p style="color:var(--muted); font-size:0.8rem;">@sumit_runs • <span class="live-dot"></span>Live</p>
-          <small style="color:var(--accent);">📍 Jaipur, Rajasthan • 📞 Active</small>
+          <p style="color:var(--muted); font-size:0.8rem;">@sumit_runs • <span class="live-dot"></span>Online</p>
+          <small style="color:var(--accent);">📍 Live Tracking Active</small>
         </div>
       </div>
       <div style="margin-top:16px;">
@@ -195,7 +180,7 @@
     </div>
   </section>
 
-  <!-- BOTTOM NAVIGATION -->
+  <!-- NAVIGATION -->
   <nav>
     <button id="navMap" aria-current="true">
       <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
@@ -213,34 +198,160 @@
 
 <script>
 // ========================================================
-// 1. SATELLITE MAP (LEAFLET)
+// 1. 100% FREE GOOGLE SATELLITE TILES (NO API KEY / APK REQUIRED)
 // ========================================================
-const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
-const streets = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+// Google Hybrid: Real Satellite Houses/Buildings + Road Labels
+const googleSatellite = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+  maxZoom: 20,
+  subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+});
+
+// Google Streets Normal
+const googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+  maxZoom: 20,
+  subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+});
+
 let currentTile = 'satellite';
-const map = L.map('mapView', { center: [28.6139, 77.2090], zoom: 17, layers: [satellite], zoomControl: false });
+const map = L.map('mapView', {
+  center: [28.6139, 77.2090], // Default start
+  zoom: 17,
+  layers: [googleSatellite],
+  zoomControl: false
+});
 
 document.getElementById('btnToggleLayer').onclick = () => {
-  if (currentTile === 'satellite') { map.removeLayer(satellite); map.addLayer(streets); currentTile = 'street'; document.getElementById('btnToggleLayer').textContent = '🗺️ Street Map'; }
-  else { map.removeLayer(streets); map.addLayer(satellite); currentTile = 'satellite'; document.getElementById('btnToggleLayer').textContent = '🛰️ Satellite View'; }
+  if (currentTile === 'satellite') {
+    map.removeLayer(googleSatellite); map.addLayer(googleStreets); currentTile = 'street';
+    document.getElementById('btnToggleLayer').textContent = '🗺️ Normal Map';
+  } else {
+    map.removeLayer(googleStreets); map.addLayer(googleSatellite); currentTile = 'satellite';
+    document.getElementById('btnToggleLayer').textContent = '🛰️ Google Satellite';
+  }
 };
 
 let userMarker = null, accCircle = null, routeCoordinates = [];
-let runPolyline = L.polyline([], { color: '#4cc98c', weight: 6 }).addTo(map);
+let runPolyline = L.polyline([], { color: '#4cc98c', weight: 6, opacity: 0.95 }).addTo(map);
 
-function setLocation(lat, lng, acc) {
+// Live Beacon Marker
+function updateLivePosition(lat, lng, acc, shouldZoom = false) {
   const pt = [lat, lng];
   if (!userMarker) {
-    const icon = L.divIcon({ html: '<div style="width:16px;height:16px;background:#388af6;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px #388af6;"></div>', iconSize: [16, 16] });
+    const icon = L.divIcon({
+      html: '<div style="width:18px;height:18px;background:#388af6;border:3px solid #fff;border-radius:50%;box-shadow:0 0 14px #388af6;"></div>',
+      iconSize: [18, 18]
+    });
     userMarker = L.marker(pt, { icon }).addTo(map);
-    accCircle = L.circle(pt, { radius: acc, color: '#388af6', fillOpacity: 0.15, weight: 1 }).addTo(map);
-    map.setView(pt, 18);
-  } else { userMarker.setLatLng(pt); accCircle.setLatLng(pt); }
+    accCircle = L.circle(pt, { radius: acc || 15, color: '#388af6', fillOpacity: 0.15, weight: 1 }).addTo(map);
+  } else {
+    userMarker.setLatLng(pt);
+    accCircle.setLatLng(pt);
+    if (acc) accCircle.setRadius(acc);
+  }
+
+  if (shouldZoom) {
+    map.setView(pt, 18, { animate: true });
+  }
 }
-document.getElementById('btnRecenter').onclick = () => { if (userMarker) map.setView(userMarker.getLatLng(), 18); };
+
+document.getElementById('btnRecenter').onclick = () => {
+  if (userMarker) map.setView(userMarker.getLatLng(), 18, { animate: true });
+  else locateUserNow(true);
+};
 
 // ========================================================
-// 2. PACE ALARM ENGINE
+// 2. REAL-TIME GPS TRACKING & DISTANCE CLEARING
+// ========================================================
+let isRunning = false, watchId = null, runTimer = null, seconds = 0, distanceMeters = 0;
+
+function haversine(a, b) {
+  const R = 6371000, dLat = (b[0]-a[0])*Math.PI/180, dLng = (b[1]-a[1])*Math.PI/180;
+  return 2 * R * Math.asin(Math.sqrt(Math.sin(dLat/2)**2 + Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLng/2)**2));
+}
+
+function locateUserNow(autoZoom = false) {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p => {
+    updateLivePosition(p.coords.latitude, p.coords.longitude, p.coords.accuracy, autoZoom);
+  }, () => {}, { enableHighAccuracy: true });
+}
+
+function startGPS() {
+  initAudio();
+  if (!navigator.geolocation) { alert('GPS not supported in this browser'); return; }
+
+  isRunning = true;
+  document.getElementById('btnStart').hidden = true;
+  document.getElementById('btnPause').hidden = false;
+  document.getElementById('btnFinish').hidden = false;
+  document.getElementById('gpsState').textContent = 'Live Tracking Active...';
+
+  // 1. Instant Zoom to User Location right now
+  navigator.geolocation.getCurrentPosition(p => {
+    const lat = p.coords.latitude, lng = p.coords.longitude;
+    updateLivePosition(lat, lng, p.coords.accuracy, true);
+    routeCoordinates.push([lat, lng]);
+  }, () => {}, { enableHighAccuracy: true });
+
+  // 2. Continuous Real-Time Tracking as User Moves
+  watchId = navigator.geolocation.watchPosition(p => {
+    const lat = p.coords.latitude, lng = p.coords.longitude;
+    updateLivePosition(lat, lng, p.coords.accuracy, false);
+
+    if (isRunning) {
+      if (routeCoordinates.length > 0) {
+        const lastPt = routeCoordinates[routeCoordinates.length - 1];
+        const stepDist = haversine(lastPt, [lat, lng]);
+        // Ignore GPS jitter under 2 meters
+        if (stepDist >= 2) {
+          distanceMeters += stepDist;
+          routeCoordinates.push([lat, lng]);
+          runPolyline.setLatLngs(routeCoordinates);
+        }
+      } else {
+        routeCoordinates.push([lat, lng]);
+      }
+      // Follow user position on map
+      map.panTo([lat, lng], { animate: true });
+    }
+  }, (err) => {
+    document.getElementById('gpsState').textContent = 'Weak GPS Signal...';
+  }, { enableHighAccuracy: true, maximumAge: 0 });
+
+  // 3. Time, Distance, Pace Timer
+  runTimer = setInterval(() => {
+    seconds++;
+    document.getElementById('txtTime').textContent = Math.floor(seconds/60) + ':' + String(seconds%60).padStart(2, '0');
+    document.getElementById('txtDist').textContent = (distanceMeters/1000).toFixed(2);
+
+    if (distanceMeters >= 15) {
+      const livePaceSec = seconds / (distanceMeters / 1000);
+      document.getElementById('txtPace').textContent = formatPaceString(livePaceSec);
+      document.getElementById('txtSpeed').textContent = ((distanceMeters / seconds) * 3.6).toFixed(1);
+
+      if (livePaceSec > targetPaceSec) triggerPaceAlarm();
+      else stopPaceAlarm();
+    }
+  }, 1000);
+}
+
+document.getElementById('btnStart').onclick = startGPS;
+document.getElementById('btnPause').onclick = () => { isRunning = false; stopPaceAlarm(); document.getElementById('btnPause').hidden = true; document.getElementById('btnResume').hidden = false; };
+document.getElementById('btnResume').onclick = () => { isRunning = true; document.getElementById('btnPause').hidden = false; document.getElementById('btnResume').hidden = true; };
+document.getElementById('btnFinish').onclick = () => {
+  if (!confirm('Run समाप्त करें?')) return;
+  clearInterval(runTimer);
+  navigator.geolocation.clearWatch(watchId);
+  stopPaceAlarm();
+  generatePhotoCard();
+  document.getElementById('shareModal').hidden = false;
+};
+
+// First load location
+locateUserNow(true);
+
+// ========================================================
+// 3. PACE ALARM ENGINE
 // ========================================================
 let targetPaceSec = parseInt(localStorage.getItem('my_target_pace')) || 210;
 let alarmEnabled = true, audioCtx = null;
@@ -289,82 +400,21 @@ document.getElementById('btnToggleAlarm').onclick = () => {
 };
 
 // ========================================================
-// 3. LIVE GPS TRACKER
-// ========================================================
-let isRunning = false, watchId = null, runTimer = null, seconds = 0, distanceMeters = 0;
-function haversine(a, b) {
-  const R = 6371000, dLat = (b[0]-a[0])*Math.PI/180, dLng = (b[1]-a[1])*Math.PI/180;
-  return 2 * R * Math.asin(Math.sqrt(Math.sin(dLat/2)**2 + Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLng/2)**2));
-}
-
-function startGPS() {
-  initAudio();
-  if (!navigator.geolocation) { alert('GPS not supported'); return; }
-  isRunning = true;
-  document.getElementById('btnStart').hidden = true;
-  document.getElementById('btnPause').hidden = false;
-  document.getElementById('btnFinish').hidden = false;
-  document.getElementById('gpsState').textContent = 'Tracking Live...';
-
-  watchId = navigator.geolocation.watchPosition(p => {
-    const lat = p.coords.latitude, lng = p.coords.longitude;
-    setLocation(lat, lng, p.coords.accuracy);
-    if (isRunning) {
-      if (routeCoordinates.length > 0) {
-        const d = haversine(routeCoordinates[routeCoordinates.length - 1], [lat, lng]);
-        if (d >= 2) distanceMeters += d;
-      }
-      routeCoordinates.push([lat, lng]);
-      runPolyline.setLatLngs(routeCoordinates);
-      map.panTo([lat, lng]);
-    }
-  }, () => {}, { enableHighAccuracy: true });
-
-  runTimer = setInterval(() => {
-    seconds++;
-    document.getElementById('txtTime').textContent = Math.floor(seconds/60) + ':' + String(seconds%60).padStart(2, '0');
-    document.getElementById('txtDist').textContent = (distanceMeters/1000).toFixed(2);
-    if (distanceMeters >= 20) {
-      const livePaceSec = seconds / (distanceMeters / 1000);
-      document.getElementById('txtPace').textContent = formatPaceString(livePaceSec);
-      document.getElementById('txtSpeed').textContent = ((distanceMeters / seconds) * 3.6).toFixed(1);
-      if (livePaceSec > targetPaceSec) triggerPaceAlarm(); else stopPaceAlarm();
-    }
-  }, 1000);
-}
-
-document.getElementById('btnStart').onclick = startGPS;
-document.getElementById('btnPause').onclick = () => { isRunning = false; stopPaceAlarm(); document.getElementById('btnPause').hidden = true; document.getElementById('btnResume').hidden = false; };
-document.getElementById('btnResume').onclick = () => { isRunning = true; document.getElementById('btnPause').hidden = false; document.getElementById('btnResume').hidden = true; };
-document.getElementById('btnFinish').onclick = () => {
-  if (!confirm('Run समाप्त करें?')) return;
-  clearInterval(runTimer);
-  navigator.geolocation.clearWatch(watchId);
-  stopPaceAlarm();
-  generatePhotoCard();
-  document.getElementById('shareModal').hidden = false;
-};
-
-if (navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(p => setLocation(p.coords.latitude, p.coords.longitude, p.coords.accuracy));
-}
-
-// ========================================================
-// 4. DRAWING FULL RUNNING TRACK ON PHOTO CARD
+// 4. DRAWING FULL TRACK ON PHOTO CARD
 // ========================================================
 function generatePhotoCard() {
   const canvas = document.getElementById('runCardCanvas');
   const ctx = canvas.getContext('2d');
   const W = 800, H = 800;
 
-  // Background Dark Aesthetic Gradient
+  // Background Gradient
   const grad = ctx.createLinearGradient(0, 0, W, H);
   grad.addColorStop(0, '#0c1b15');
   grad.addColorStop(1, '#050a08');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  // Subtle Map Grid Pattern
+  // Grid
   ctx.strokeStyle = '#183327';
   ctx.lineWidth = 1;
   for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
@@ -384,7 +434,6 @@ function generatePhotoCard() {
   const pad = 70;
   const rBox = { x: pad, y: 260, w: W - pad * 2, h: 360 };
 
-  // Use actual tracked GPS points, or demo loop route
   let pts = routeCoordinates.slice();
   if (pts.length < 2) {
     pts = [
@@ -450,7 +499,7 @@ function generatePhotoCard() {
   ctx.fillStyle = '#8ca398'; ctx.font = '14px sans-serif'; ctx.fillText('AVG PACE', 320, 695);
   ctx.fillStyle = '#4cc98c'; ctx.font = 'bold 30px tabular-nums sans-serif'; ctx.fillText(paceStr + ' /km', 320, 735);
 
-  ctx.fillStyle = '#8ca398'; ctx.font = '14px sans-serif'; ctx.fillText('LOCATION', 560, 695);
+  ctx.fillStyle = '#8ca398'; ctx.font = '14px sans-serif'; ctx.fillText('MAPS LOCATION', 560, 695);
   ctx.fillStyle = '#388af6'; ctx.font = 'bold 22px sans-serif'; ctx.fillText('📍 GOOGLE MAPS', 560, 732);
 }
 
@@ -478,7 +527,6 @@ function getShareText() {
 document.getElementById('btnShareWA').onclick = () => {
   const canvas = document.getElementById('runCardCanvas');
   canvas.toBlob(async (blob) => {
-    // 1. On Mobile: Use Web Share API which attaches REAL IMAGE directly to WhatsApp
     if (blob && navigator.share && navigator.canShare) {
       const file = new File([blob], 'RunTrack_Photo_Card.png', { type: 'image/png' });
       if (navigator.canShare({ files: [file] })) {
@@ -493,7 +541,6 @@ document.getElementById('btnShareWA').onclick = () => {
       }
     }
 
-    // 2. On Desktop / Fallback: Auto Copy Image to Clipboard & Open WhatsApp Web
     try {
       if (navigator.clipboard && navigator.clipboard.write) {
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
@@ -506,7 +553,6 @@ document.getElementById('btnShareWA').onclick = () => {
   });
 };
 
-// 📸 Instagram & Native Apps Share
 document.getElementById('btnShareNative').onclick = () => {
   const canvas = document.getElementById('runCardCanvas');
   canvas.toBlob(async (blob) => {
@@ -514,11 +560,7 @@ document.getElementById('btnShareNative').onclick = () => {
       const file = new File([blob], 'RunTrack_Photo_Card.png', { type: 'image/png' });
       if (navigator.canShare({ files: [file] })) {
         try {
-          await navigator.share({
-            files: [file],
-            title: 'My Running Route',
-            text: getShareText()
-          });
+          await navigator.share({ files: [file], title: 'My Running Route', text: getShareText() });
           return;
         } catch (e) {}
       }
@@ -527,7 +569,6 @@ document.getElementById('btnShareNative').onclick = () => {
   });
 };
 
-// 💾 Download Image to Gallery
 document.getElementById('btnDownloadCard').onclick = () => {
   const canvas = document.getElementById('runCardCanvas');
   const a = document.createElement('a');
@@ -550,7 +591,7 @@ document.getElementById('btnCloseShare').onclick = () => {
 };
 
 // ========================================================
-// 5. COMPETITION LEADERBOARD
+// 5. LEADERBOARD & NAVIGATION
 // ========================================================
 let participants = [
   { id: 'p1', name: 'Vikram Choudhary', city: 'Jaipur', category: '5K', time: '21:40' },
@@ -572,9 +613,6 @@ function renderParticipants() {
   });
 }
 
-// ========================================================
-// 6. TAB SWITCHING
-// ========================================================
 function switchTab(t) {
   document.getElementById('mapView').hidden = (t !== 'map');
   document.querySelector('.top-hud').hidden = (t !== 'map');
@@ -594,7 +632,6 @@ document.getElementById('navMap').onclick = () => switchTab('map');
 document.getElementById('navComp').onclick = () => switchTab('comp');
 document.getElementById('navProfile').onclick = () => switchTab('profile');
 
-// Initial Setup
 updateTargetPaceUI();
 renderParticipants();
 </script>
